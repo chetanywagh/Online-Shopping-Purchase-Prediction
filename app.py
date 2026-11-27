@@ -61,15 +61,33 @@ st.markdown("""
     max-width: 1250px;
 }
 
-/* Navigation */
+/* Navigation title */
 .nav-title {
     font-size: 27px;
     font-weight: 800;
     color: #182B49;
+    white-space: nowrap;
+    overflow: visible;
+    min-width: 150px;
+    padding: 5px 0;
 }
 
 .nav-title span {
     color: #F28C28;
+}
+
+/* Navigation radio */
+div[role="radiogroup"] {
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+div[role="radiogroup"] label {
+    background: white;
+    border: 1px solid #E3E6EC;
+    border-radius: 8px;
+    padding: 8px 12px;
+    white-space: nowrap;
 }
 
 /* Hero section */
@@ -136,7 +154,8 @@ st.markdown("""
 }
 
 /* Buttons */
-.stButton > button {
+.stButton > button,
+.stFormSubmitButton > button {
     background-color: #F28C28;
     color: white;
     border: none;
@@ -145,7 +164,8 @@ st.markdown("""
     font-weight: 650;
 }
 
-.stButton > button:hover {
+.stButton > button:hover,
+.stFormSubmitButton > button:hover {
     background-color: #D97412;
     color: white;
 }
@@ -158,18 +178,7 @@ st.markdown("""
     border-radius: 14px;
 }
 
-/* Navigation radio */
-div[role="radiogroup"] {
-    gap: 10px;
-}
-
-div[role="radiogroup"] label {
-    background: white;
-    border: 1px solid #E3E6EC;
-    border-radius: 8px;
-    padding: 8px 14px;
-}
-
+/* Divider */
 hr {
     border-color: #E2E5EA;
 }
@@ -182,15 +191,20 @@ hr {
 # 4. TOP NAVIGATION
 # ==========================================
 
-top1, top2 = st.columns([1, 3])
+top1, top2 = st.columns(
+    [1.2, 2.8],
+    gap="large"
+)
 
 with top1:
+
     st.markdown(
         '<div class="nav-title">Shop<span>Sense.</span></div>',
         unsafe_allow_html=True
     )
 
 with top2:
+
     page = st.radio(
         "Navigation",
         [

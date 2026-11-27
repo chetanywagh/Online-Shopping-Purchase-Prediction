@@ -1,178 +1,29 @@
-
 import streamlit as st
 import pandas as pd
-import numpy as np
 import pickle
-import os
+import plotly.express as px
 
-# --------------------------------------------------
-# PAGE CONFIGURATION
-# --------------------------------------------------
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+
+# ==========================================
+# 1. PAGE CONFIGURATION
+# ==========================================
 
 st.set_page_config(
-    page_title="ShopSense AI | Purchase Prediction",
+    page_title="ShopSense | Purchase Prediction",
     page_icon="🛍️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# --------------------------------------------------
-# CUSTOM CSS
-# --------------------------------------------------
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
-
-.stApp {
-    background: #080d19;
-    color: #f1f5f9;
-}
-
-[data-testid="stSidebar"] {
-    background: #101827;
-    border-right: 1px solid #263449;
-}
-
-.hero {
-    background: linear-gradient(120deg, #111f3d, #142d50, #10223b);
-    border: 1px solid #29466d;
-    border-radius: 22px;
-    padding: 35px;
-    margin-bottom: 25px;
-}
-
-.hero h1 {
-    color: #ffffff;
-    font-size: 42px;
-    font-weight: 800;
-    margin-bottom: 10px;
-}
-
-.hero p {
-    color: #b8c9e2;
-    font-size: 16px;
-}
-
-.tag {
-    display: inline-block;
-    background: #173b60;
-    color: #76c7ff;
-    border: 1px solid #28618c;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    margin-bottom: 15px;
-}
-
-.metric-card {
-    background: linear-gradient(145deg, #142238, #101a2c);
-    border: 1px solid #273d5c;
-    padding: 22px;
-    border-radius: 17px;
-    min-height: 125px;
-}
-
-.metric-label {
-    color: #9aacc5;
-    font-size: 13px;
-    margin-bottom: 10px;
-}
-
-.metric-value {
-    color: #ffffff;
-    font-size: 29px;
-    font-weight: 800;
-}
-
-.metric-icon {
-    font-size: 22px;
-}
-
-.section-heading {
-    color: #ffffff;
-    font-size: 23px;
-    font-weight: 700;
-    margin: 20px 0 15px 0;
-}
-
-.result-success {
-    background: linear-gradient(120deg, #103b35, #102b2c);
-    border: 1px solid #1d806d;
-    padding: 28px;
-    border-radius: 18px;
-    text-align: center;
-}
-
-.result-danger {
-    background: linear-gradient(120deg, #40202b, #2b1b2b);
-    border: 1px solid #a34a65;
-    padding: 28px;
-    border-radius: 18px;
-    text-align: center;
-}
-
-.result-title {
-    color: white;
-    font-size: 28px;
-    font-weight: 800;
-}
-
-.result-subtitle {
-    color: #d1dbe8;
-    font-size: 14px;
-}
-
-div.stButton > button {
-    background: linear-gradient(90deg, #2563eb, #0ea5e9);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 12px 25px;
-    font-weight: 700;
-    min-height: 48px;
-    width: 100%;
-}
-
-div.stButton > button:hover {
-    background: linear-gradient(90deg, #1d4ed8, #0284c7);
-    color: white;
-    border: none;
-}
-
-div[data-testid="stMetric"] {
-    background: #142238;
-    border: 1px solid #273d5c;
-    padding: 16px;
-    border-radius: 14px;
-}
-
-.stTextInput input, .stNumberInput input {
-    background: #111d30;
-    color: white;
-}
-
-hr {
-    border-color: #263449;
-}
-
-footer {
-    visibility: hidden;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# --------------------------------------------------
-# LOAD DATASET AND TRAINED MODEL
-# --------------------------------------------------
+# ==========================================
+# 2. LOAD DATASET AND MODEL
+# ==========================================
 
 @st.cache_data
-def load_dataset():
+def load_data():
     return pd.read_csv("online_shoppers_intention.csv")
 
 
@@ -182,334 +33,412 @@ def load_model():
         return pickle.load(file)
 
 
-try:
-    df = load_dataset()
-    model = load_model()
-
-except FileNotFoundError as e:
-    st.error(
-        "Required file not found: " + str(e) +
-        ". Please upload the dataset CSV and trained PKL file "
-        "to your GitHub repository."
-    )
-    st.stop()
-
-except Exception as e:
-    st.error(f"Error loading project files: {e}")
-    st.stop()
+df = load_data()
+model = load_model()
 
 
-# --------------------------------------------------
-# PREPARE DATA AND FEATURES
-# --------------------------------------------------
+# ==========================================
+# 3. CUSTOM CSS DESIGN
+# ==========================================
 
-if "Revenue" not in df.columns:
-    st.error("Revenue column is missing from the dataset.")
-    st.stop()
+st.markdown("""
+<style>
 
-X = df.drop("Revenue", axis=1)
+.stApp {
+    background-color: #F7F7F1;
+    color: #26352C;
+}
 
-X = pd.get_dummies(
-    X,
-    columns=["Month", "VisitorType"],
-    drop_first=True,
-    dtype=int
-)
+/* Sidebar */
 
-if hasattr(model, "feature_names_in_"):
-    feature_columns = list(model.feature_names_in_)
-else:
-    feature_columns = list(X.columns)
+[data-testid="stSidebar"] {
+    background-color: #183D30;
+}
 
-# Check that the dataset and model have matching features
-if set(feature_columns) != set(X.columns):
-    st.error(
-        "Dataset features do not match the saved model. "
-        "Please check the preprocessing used in your notebook."
-    )
-    st.stop()
+[data-testid="stSidebar"] * {
+    color: #FFFFFF;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    color: #FFFFFF;
+}
+
+/* Main headings */
+
+h1, h2, h3 {
+    color: #183D30;
+    font-weight: 650;
+}
+
+/* Metric cards */
+
+[data-testid="stMetric"] {
+    background-color: #FFFFFF;
+    padding: 19px;
+    border-radius: 12px;
+    border: 1px solid #E3E9E0;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #66776B;
+}
+
+[data-testid="stMetricValue"] {
+    color: #183D30;
+}
+
+/* Buttons */
+
+.stButton > button {
+    background-color: #276749;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    padding: 10px 22px;
+    font-weight: 600;
+}
+
+.stButton > button:hover {
+    background-color: #183D30;
+    color: white;
+}
+
+/* Input fields */
+
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] {
+    border-radius: 7px;
+}
+
+/* Divider */
+
+hr {
+    border-color: #DFE7DC;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 
-# --------------------------------------------------
-# SIDEBAR
-# --------------------------------------------------
+# ==========================================
+# 4. SIDEBAR
+# ==========================================
 
-st.sidebar.markdown("## 🛍️ ShopSense AI")
-st.sidebar.caption("Intelligent Purchase Prediction")
+st.sidebar.markdown("# 🛍️ ShopSense")
+
+st.sidebar.caption("CUSTOMER BEHAVIOUR ANALYTICS")
 
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "NAVIGATION",
     [
-        "🏠 Dashboard",
-        "🔮 Purchase Predictor",
-        "📊 Dataset Explorer",
-        "🧠 Model Insights"
+        "Overview",
+        "Purchase Prediction",
+        "Customer Analytics",
+        "Model Insights"
     ]
 )
 
 st.sidebar.markdown("---")
 
-st.sidebar.markdown("### About the Project")
-st.sidebar.caption(
-    "ShopSense AI uses Machine Learning "
-    "to understand online shopping behaviour "
-    "and predict customer purchase intention."
+st.sidebar.markdown("### About Project")
+
+st.sidebar.write(
+    "A Machine Learning application "
+    "to understand customer shopping "
+    "behaviour and predict purchase intention."
 )
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Built with Python · Streamlit · Scikit-learn")
+
+st.sidebar.caption("Developed using Python & Machine Learning")
 
 
-# --------------------------------------------------
-# COMMON METRICS
-# --------------------------------------------------
+# ==========================================
+# 5. OVERVIEW PAGE
+# ==========================================
 
-total_sessions = len(df)
-purchase_sessions = int(df["Revenue"].sum())
-no_purchase_sessions = total_sessions - purchase_sessions
+if page == "Overview":
 
-purchase_rate = (
-    purchase_sessions / total_sessions * 100
-    if total_sessions > 0 else 0
-)
+    st.title("Shopping Overview")
 
+    st.write(
+        "Understand website visitors, shopping "
+        "activities and purchase behaviour."
+    )
 
-# --------------------------------------------------
-# DASHBOARD
-# --------------------------------------------------
+    st.markdown("---")
 
-if page == "🏠 Dashboard":
+    total_visitors = len(df)
 
-    st.markdown("""
-    <div class="hero">
-        <div class="tag">MACHINE LEARNING PROJECT</div>
-        <h1>Understand Intent.<br>Predict Purchases.</h1>
-        <p>
-        An intelligent platform that analyzes online shopping
-        behaviour and predicts whether a visitor is likely to
-        make a purchase.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    purchase_visitors = int(df["Revenue"].sum())
 
-    st.markdown('<div class="section-heading">Business Overview</div>',
-                unsafe_allow_html=True)
+    non_purchase = total_visitors - purchase_visitors
+
+    purchase_rate = (
+        purchase_visitors / total_visitors
+    ) * 100
+
+    # Statistics
 
     c1, c2, c3, c4 = st.columns(4)
 
-    with c1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-icon">👥</div>
-            <div class="metric-label">Total Sessions</div>
-            <div class="metric-value">{total_sessions:,}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    c1.metric("Total Sessions", f"{total_visitors:,}")
 
-    with c2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-icon">🛒</div>
-            <div class="metric-label">Purchase Sessions</div>
-            <div class="metric-value">{purchase_sessions:,}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    c2.metric("Purchases", f"{purchase_visitors:,}")
 
-    with c3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-icon">🚶</div>
-            <div class="metric-label">No Purchase Sessions</div>
-            <div class="metric-value">{no_purchase_sessions:,}</div>
-        </div>
-        """, unsafe_allow_html=True)
+    c3.metric("No Purchases", f"{non_purchase:,}")
 
-    with c4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-icon">📈</div>
-            <div class="metric-label">Purchase Rate</div>
-            <div class="metric-value">{purchase_rate:.1f}%</div>
-        </div>
-        """, unsafe_allow_html=True)
+    c4.metric("Purchase Rate", f"{purchase_rate:.2f}%")
 
-    st.markdown('<div class="section-heading">Purchase Behaviour</div>',
-                unsafe_allow_html=True)
+    st.markdown("---")
 
-    col1, col2 = st.columns(2)
+    # Charts
 
-    with col1:
-        st.markdown("#### Purchase Distribution")
-        chart_data = pd.DataFrame({
+    left, right = st.columns(2)
+
+    with left:
+
+        st.subheader("Purchase Distribution")
+
+        purchase_df = pd.DataFrame({
             "Session Type": ["Purchase", "No Purchase"],
-            "Sessions": [purchase_sessions, no_purchase_sessions]
-        }).set_index("Session Type")
+            "Visitors": [purchase_visitors, non_purchase]
+        })
 
-        st.bar_chart(chart_data)
-
-    with col2:
-        st.markdown("#### Visitor Type")
-        visitor_data = df["VisitorType"].value_counts()
-        st.bar_chart(visitor_data)
-
-    st.info(
-        "Explore the Purchase Predictor to test a visitor's "
-        "shopping session using the trained Machine Learning model."
-    )
-
-
-# --------------------------------------------------
-# PURCHASE PREDICTOR
-# --------------------------------------------------
-
-elif page == "🔮 Purchase Predictor":
-
-    st.markdown("""
-    <div class="hero">
-        <div class="tag">AI-POWERED PREDICTION</div>
-        <h1>Purchase Predictor</h1>
-        <p>
-        Enter the visitor's browsing activity and let
-        Machine Learning predict their purchase intention.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="section-heading">👤 Visitor Information</div>',
-        unsafe_allow_html=True
-    )
-
-    with st.form("prediction_form"):
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            month_options = sorted(df["Month"].dropna().unique().tolist())
-            month = st.selectbox("Visit Month", month_options)
-
-            visitor_options = sorted(
-                df["VisitorType"].dropna().unique().tolist()
-            )
-            visitor_type = st.selectbox(
-                "Visitor Type", visitor_options
-            )
-
-            weekend = st.selectbox(
-                "Was the visit on a weekend?",
-                ["No", "Yes"]
-            )
-
-            special_day = st.slider(
-                "Special Day Value",
-                0.0, 1.0, 0.0, 0.1
-            )
-
-            region = st.selectbox(
-                "Region",
-                sorted(df["Region"].dropna().unique().tolist())
-            )
-
-        with col2:
-            operating_system = st.selectbox(
-                "Operating System",
-                sorted(df["OperatingSystems"].dropna().unique().tolist())
-            )
-
-            browser = st.selectbox(
-                "Browser",
-                sorted(df["Browser"].dropna().unique().tolist())
-            )
-
-            traffic_type = st.selectbox(
-                "Traffic Type",
-                sorted(df["TrafficType"].dropna().unique().tolist())
-            )
-
-        st.markdown("---")
-
-        st.markdown(
-            '<div class="section-heading">📄 Page Activity</div>',
-            unsafe_allow_html=True
+        fig = px.pie(
+            purchase_df,
+            names="Session Type",
+            values="Visitors",
+            hole=0.55,
+            color_discrete_sequence=["#276749", "#E8A75B"]
         )
 
-        col1, col2 = st.columns(2)
+        fig.update_layout(
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            margin=dict(t=20, b=20, l=20, r=20),
+            legend_title_text=""
+        )
 
-        with col1:
-            administrative = st.number_input(
-                "Administrative Pages",
-                min_value=0,
-                max_value=1000,
-                value=0
-            )
+        st.plotly_chart(fig, use_container_width=True)
 
-            administrative_duration = st.number_input(
-                "Administrative Duration (seconds)",
-                min_value=0.0,
-                value=0.0
-            )
+    with right:
 
-            informational = st.number_input(
-                "Informational Pages",
-                min_value=0,
-                max_value=1000,
-                value=0
-            )
+        st.subheader("Monthly Website Visits")
 
-            informational_duration = st.number_input(
-                "Informational Duration (seconds)",
-                min_value=0.0,
-                value=0.0
-            )
+        monthly = (
+            df.groupby("Month")
+            .size()
+            .reset_index(name="Sessions")
+        )
 
-        with col2:
-            product_related = st.number_input(
-                "Product Related Pages",
-                min_value=0,
-                max_value=1000,
-                value=1
-            )
+        fig2 = px.bar(
+            monthly,
+            x="Month",
+            y="Sessions",
+            color_discrete_sequence=["#276749"]
+        )
 
-            product_related_duration = st.number_input(
-                "Product Related Duration (seconds)",
-                min_value=0.0,
-                value=30.0
-            )
+        fig2.update_layout(
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            margin=dict(t=20, b=20),
+            xaxis_title="Month",
+            yaxis_title="Total Sessions"
+        )
 
-            bounce_rates = st.number_input(
-                "Bounce Rate",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.02,
-                step=0.01,
-                format="%.4f"
-            )
+        st.plotly_chart(fig2, use_container_width=True)
 
-            exit_rates = st.number_input(
-                "Exit Rate",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.04,
-                step=0.01,
-                format="%.4f"
-            )
+    st.markdown("---")
 
-        page_values = st.number_input(
-            "Page Value",
+    st.subheader("Quick Dataset Information")
+
+    a, b, c = st.columns(3)
+
+    a.metric("Dataset Rows", f"{df.shape[0]:,}")
+
+    b.metric("Dataset Columns", df.shape[1])
+
+    c.metric("Target Variable", "Revenue")
+
+
+# ==========================================
+# 6. PURCHASE PREDICTION PAGE
+# ==========================================
+
+elif page == "Purchase Prediction":
+
+    st.title("Purchase Prediction")
+
+    st.write(
+        "Enter the visitor's website activity "
+        "to predict their purchase intention."
+    )
+
+    st.markdown("---")
+
+    st.subheader("01. Page Browsing Activity")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        administrative = st.number_input(
+            "Administrative Pages",
+            min_value=0,
+            value=0
+        )
+
+        informational = st.number_input(
+            "Informational Pages",
+            min_value=0,
+            value=0
+        )
+
+    with col2:
+
+        administrative_duration = st.number_input(
+            "Administrative Duration",
             min_value=0.0,
             value=0.0
         )
 
-        st.markdown("---")
-
-        submitted = st.form_submit_button(
-            "🔮 Predict Purchase Intention",
-            use_container_width=True
+        informational_duration = st.number_input(
+            "Informational Duration",
+            min_value=0.0,
+            value=0.0
         )
 
-    if submitted:
+    with col3:
+
+        product_related = st.number_input(
+            "Product Related Pages",
+            min_value=0,
+            value=1
+        )
+
+        product_duration = st.number_input(
+            "Product Related Duration",
+            min_value=0.0,
+            value=0.0
+        )
+
+    st.markdown("---")
+
+    st.subheader("02. Website Behaviour")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        bounce_rates = st.number_input(
+            "Bounce Rate",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.01
+        )
+
+    with col2:
+
+        exit_rates = st.number_input(
+            "Exit Rate",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.01
+        )
+
+    with col3:
+
+        page_values = st.number_input(
+            "Page Values",
+            min_value=0.0,
+            value=0.0
+        )
+
+    st.markdown("---")
+
+    st.subheader("03. Visitor Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    month_options = sorted(
+        df["Month"].dropna().unique().tolist()
+    )
+
+    visitor_options = sorted(
+        df["VisitorType"].dropna().unique().tolist()
+    )
+
+    with col1:
+
+        month = st.selectbox(
+            "Month",
+            month_options
+        )
+
+        special_day = st.number_input(
+            "Special Day",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.1
+        )
+
+    with col2:
+
+        visitor_type = st.selectbox(
+            "Visitor Type",
+            visitor_options
+        )
+
+        region_options = sorted(
+            df["Region"].dropna().unique().tolist()
+        )
+
+        region = st.selectbox(
+            "Visitor Region",
+            region_options,
+            format_func=lambda x: f"Region {int(x)}"
+        )
+
+    with col3:
+
+        operating_system = st.selectbox(
+            "Operating System",
+            sorted(df["OperatingSystems"].unique())
+        )
+
+        browser = st.selectbox(
+            "Browser",
+            sorted(df["Browser"].unique())
+        )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        traffic_type = st.selectbox(
+            "Traffic Type",
+            sorted(df["TrafficType"].unique())
+        )
+
+    with col2:
+
+        weekend = st.selectbox(
+            "Weekend Visit",
+            [False, True],
+            format_func=lambda x: "Yes" if x else "No"
+        )
+
+    st.markdown("---")
+
+    # Prediction
+
+    if st.button("Predict Customer Behaviour", use_container_width=True):
 
         input_data = pd.DataFrame([{
             "Administrative": administrative,
@@ -517,7 +446,7 @@ elif page == "🔮 Purchase Predictor":
             "Informational": informational,
             "Informational_Duration": informational_duration,
             "ProductRelated": product_related,
-            "ProductRelated_Duration": product_related_duration,
+            "ProductRelated_Duration": product_duration,
             "BounceRates": bounce_rates,
             "ExitRates": exit_rates,
             "PageValues": page_values,
@@ -528,10 +457,10 @@ elif page == "🔮 Purchase Predictor":
             "Region": region,
             "TrafficType": traffic_type,
             "VisitorType": visitor_type,
-            "Weekend": weekend == "Yes"
+            "Weekend": weekend
         }])
 
-        # Apply the same encoding used during model training
+        # Apply the same categorical encoding
         input_encoded = pd.get_dummies(
             input_data,
             columns=["Month", "VisitorType"],
@@ -539,193 +468,263 @@ elif page == "🔮 Purchase Predictor":
             dtype=int
         )
 
-        # Keep the exact training feature names and order
+        # Match the original training columns
         input_encoded = input_encoded.reindex(
-            columns=feature_columns,
+            columns=model.feature_names_in_,
             fill_value=0
         )
 
-        try:
-            prediction = model.predict(input_encoded)[0]
-            probabilities = model.predict_proba(input_encoded)[0]
+        # Predict
+        prediction = model.predict(input_encoded)[0]
 
-            classes = list(model.classes_)
-            purchase_index = classes.index(1)
-            no_purchase_index = classes.index(0)
+        probabilities = model.predict_proba(input_encoded)[0]
 
-            purchase_probability = probabilities[purchase_index] * 100
-            no_purchase_probability = probabilities[no_purchase_index] * 100
+        purchase_index = list(model.classes_).index(1)
 
-            st.markdown("---")
-            st.markdown(
-                '<div class="section-heading">Prediction Result</div>',
-                unsafe_allow_html=True
-            )
+        purchase_probability = (
+            probabilities[purchase_index] * 100
+        )
+
+        st.markdown("### Prediction Result")
+
+        result1, result2 = st.columns(2)
+
+        with result1:
 
             if prediction == 1:
 
-                st.markdown(f"""
-                <div class="result-success">
-                    <div style="font-size:45px;">🛒</div>
-                    <div class="result-title">Purchase Likely!</div>
-                    <p class="result-subtitle">
-                    The model predicts that this visitor is likely
-                    to make a purchase.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.success(
+                    "Purchase Likely\n\n"
+                    "The model predicts that this visitor "
+                    "is likely to make a purchase."
+                )
 
             else:
 
-                st.markdown(f"""
-                <div class="result-danger">
-                    <div style="font-size:45px;">🛍️</div>
-                    <div class="result-title">No Purchase Predicted</div>
-                    <p class="result-subtitle">
-                    The model predicts that this visitor is
-                    unlikely to make a purchase.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("### Prediction Confidence")
-
-            p1, p2 = st.columns(2)
-
-            with p1:
-                st.metric(
-                    "Purchase Probability",
-                    f"{purchase_probability:.2f}%"
+                st.warning(
+                    "Purchase Unlikely\n\n"
+                    "The model predicts that this visitor "
+                    "is unlikely to make a purchase."
                 )
-                st.progress(float(purchase_probability / 100))
 
-            with p2:
-                st.metric(
-                    "No Purchase Probability",
-                    f"{no_purchase_probability:.2f}%"
-                )
-                st.progress(float(no_purchase_probability / 100))
+        with result2:
 
-            st.caption(
-                "Probabilities are model estimates, not a guarantee "
-                "of actual customer behaviour."
+            st.metric(
+                "Purchase Probability",
+                f"{purchase_probability:.2f}%"
             )
 
-        except Exception as e:
-            st.error(f"Prediction error: {e}")
+            st.progress(
+                float(purchase_probability / 100)
+            )
 
 
-# --------------------------------------------------
-# DATASET EXPLORER
-# --------------------------------------------------
+# ==========================================
+# 7. CUSTOMER ANALYTICS PAGE
+# ==========================================
 
-elif page == "📊 Dataset Explorer":
+elif page == "Customer Analytics":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="tag">DATA ANALYTICS</div>
-        <h1>Dataset Explorer</h1>
-        <p>Explore the online shopping sessions used in this project.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("Customer Analytics")
 
-    c1, c2, c3 = st.columns(3)
-
-    c1.metric("Total Records", f"{len(df):,}")
-    c2.metric("Total Features", len(df.columns) - 1)
-    c3.metric("Missing Values", int(df.isnull().sum().sum()))
-
-    st.markdown("### Dataset Preview")
-    st.dataframe(df.head(20), use_container_width=True)
-
-    st.markdown("### Revenue Distribution")
-
-    revenue_counts = df["Revenue"].value_counts().rename(
-        index={0: "No Purchase", 1: "Purchase"}
+    st.write(
+        "Explore different patterns in customer "
+        "visits and shopping behaviour."
     )
 
-    st.bar_chart(revenue_counts)
+    st.markdown("---")
 
-    st.markdown("### Visitor Type Distribution")
-    st.bar_chart(df["VisitorType"].value_counts())
+    st.subheader("Dataset Preview")
 
-    st.markdown("### Monthly Sessions")
-    st.bar_chart(df["Month"].value_counts())
+    st.dataframe(
+        df.head(10),
+        use_container_width=True
+    )
+
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.subheader("Visitor Type Distribution")
+
+        visitor_data = (
+            df["VisitorType"]
+            .value_counts()
+            .reset_index()
+        )
+
+        visitor_data.columns = ["Visitor Type", "Sessions"]
+
+        fig = px.bar(
+            visitor_data,
+            x="Visitor Type",
+            y="Sessions",
+            color_discrete_sequence=["#276749"]
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+
+        st.subheader("Purchase Rate by Visitor Type")
+
+        visitor_purchase = (
+            df.groupby("VisitorType")["Revenue"]
+            .mean()
+            .reset_index()
+        )
+
+        visitor_purchase["Revenue"] *= 100
+
+        fig2 = px.bar(
+            visitor_purchase,
+            x="VisitorType",
+            y="Revenue",
+            color_discrete_sequence=["#E8A75B"],
+            labels={
+                "VisitorType": "Visitor Type",
+                "Revenue": "Purchase Rate (%)"
+            }
+        )
+
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown("---")
+
+    st.subheader("Missing Values Analysis")
+
+    missing = df.isnull().sum()
+
+    missing_df = pd.DataFrame({
+        "Column": missing.index,
+        "Missing Values": missing.values
+    })
+
+    st.dataframe(
+        missing_df,
+        use_container_width=True
+    )
 
 
-# --------------------------------------------------
-# MODEL INSIGHTS
-# --------------------------------------------------
+# ==========================================
+# 8. MODEL INSIGHTS PAGE
+# ==========================================
 
-elif page == "🧠 Model Insights":
+elif page == "Model Insights":
 
-    st.markdown("""
-    <div class="hero">
-        <div class="tag">MODEL INTELLIGENCE</div>
-        <h1>Machine Learning Insights</h1>
-        <p>
-        Understand how the trained Random Forest model
-        analyzes online shopping behaviour.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("Machine Learning Insights")
 
-    st.markdown("### Model Information")
+    st.write(
+        "Understand the performance of the "
+        "Random Forest classification model."
+    )
+
+    st.markdown("---")
+
+    # Prepare features
+    X = df.drop("Revenue", axis=1)
+
+    X = pd.get_dummies(
+        X,
+        columns=["Month", "VisitorType"],
+        drop_first=True,
+        dtype=int
+    )
+
+    y = df["Revenue"].astype(int)
+
+    X = X.reindex(
+        columns=model.feature_names_in_,
+        fill_value=0
+    )
+
+    # Same test split as notebook
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
+
+    y_pred = model.predict(X_test)
+
+    accuracy = accuracy_score(
+        y_test,
+        y_pred
+    ) * 100
+
+    st.subheader("Model Performance")
 
     c1, c2, c3 = st.columns(3)
 
-    c1.metric("Algorithm", "Random Forest")
-    c2.metric("Estimators", "100")
-    c3.metric("Input Features", len(feature_columns))
+    c1.metric("Test Accuracy", f"{accuracy:.2f}%")
 
-    if hasattr(model, "feature_importances_"):
+    c2.metric("Training Samples", f"{len(X_train):,}")
 
-        importance_df = pd.DataFrame({
-            "Feature": feature_columns,
-            "Importance": model.feature_importances_
-        }).sort_values(
-            by="Importance",
-            ascending=False
-        )
+    c3.metric("Testing Samples", f"{len(X_test):,}")
 
-        st.markdown("### Feature Importance")
+    st.markdown("---")
 
-        st.bar_chart(
-            importance_df.head(12).set_index("Feature")
-        )
+    st.subheader("Important Features")
 
-        st.markdown("### Feature Importance Details")
-        st.dataframe(
-            importance_df,
-            use_container_width=True
-        )
+    importance = pd.DataFrame({
+        "Feature": model.feature_names_in_,
+        "Importance": model.feature_importances_
+    })
 
-    st.markdown("### Project Workflow")
+    importance = importance.sort_values(
+        by="Importance",
+        ascending=False
+    ).head(10)
 
-    st.markdown("""
-    1. Data Collection
-    2. Data Cleaning and Preprocessing
-    3. Exploratory Data Analysis
-    4. Feature Encoding
-    5. Model Training
-    6. Model Evaluation
-    7. Purchase Prediction
-    """)
+    fig = px.bar(
+        importance,
+        x="Importance",
+        y="Feature",
+        orientation="h",
+        color_discrete_sequence=["#276749"],
+        title="Top 10 Features Influencing Prediction"
+    )
+
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"}
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+
+    st.subheader("Model Details")
+
+    st.write("**Algorithm:** Random Forest Classifier")
+
+    st.write("**Learning Type:** Supervised Learning")
+
+    st.write("**Problem:** Binary Classification")
+
+    st.write("**Target Column:** Revenue")
+
+    st.write("**Class 0:** No Purchase")
+
+    st.write("**Class 1:** Purchase")
+
+    st.info(
+        "The model learns customer behaviour from "
+        "previous website sessions and predicts "
+        "whether a visitor is likely to purchase."
+    )
 
 
-# --------------------------------------------------
-# FOOTER
-# --------------------------------------------------
+# ==========================================
+# 9. FOOTER
+# ==========================================
 
 st.markdown("---")
 
-st.markdown(
-    """
-    <div style="text-align:center; color:#8293aa; padding:15px;">
-        <b>ShopSense AI</b> · Online Shopping Purchase Prediction
-        <br>
-        Built using Python, Pandas, Scikit-learn and Streamlit
-    </div>
-    """,
-    unsafe_allow_html=True
+st.caption(
+    "ShopSense | Online Shopping Purchase Prediction "
+    "| Machine Learning Project"
 )

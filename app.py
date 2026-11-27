@@ -34,14 +34,12 @@ try:
     df = load_data()
     model = load_model()
 
-except Exception as e:
-    st.error("Dataset or model file could not be loaded.")
-    st.write("Please check that both files are in the project folder.")
+except Exception:
+    st.error("Please check your dataset and model files.")
     st.stop()
 
-
 # =====================================================
-# 3. CUSTOM DESIGN
+# 3. CUSTOM CSS
 # =====================================================
 
 st.markdown("""
@@ -69,14 +67,6 @@ st.markdown("""
     color: #718096;
     font-size: 15px;
     margin-bottom: 25px;
-}
-
-.section-title {
-    color: #172b4d;
-    font-size: 22px;
-    font-weight: 700;
-    margin-top: 15px;
-    margin-bottom: 15px;
 }
 
 .metric-card {
@@ -112,16 +102,29 @@ st.markdown("""
     background: white;
     border: 1px solid #e5eaf2;
     border-radius: 14px;
-    padding: 24px;
+    padding: 25px;
     text-align: center;
-    min-height: 155px;
+    min-height: 145px;
 }
 
 .result-number {
-    font-size: 32px;
+    font-size: 34px;
     font-weight: 800;
-    color: #172b4d;
-    margin-top: 10px;
+    margin-top: 12px;
+}
+
+.result-label {
+    color: #718096;
+    font-size: 15px;
+}
+
+.final-result {
+    background: #eaf2ff;
+    border: 1px solid #c9dcff;
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    margin-top: 20px;
 }
 
 div.stButton > button {
@@ -141,9 +144,8 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-
 # =====================================================
-# 4. SIDEBAR NAVIGATION
+# 4. SIDEBAR
 # =====================================================
 
 with st.sidebar:
@@ -175,7 +177,6 @@ with st.sidebar:
     st.markdown("---")
     st.caption("Python | Random Forest | Streamlit")
 
-
 # =====================================================
 # 5. COMMON DATA
 # =====================================================
@@ -190,7 +191,6 @@ purchase_rate = (
     total_purchases / total_visitors * 100
     if total_visitors > 0 else 0
 )
-
 
 # =====================================================
 # 6. DASHBOARD
@@ -208,8 +208,6 @@ if page == "Dashboard":
         unsafe_allow_html=True
     )
 
-    # SUMMARY CARDS
-
     c1, c2, c3, c4 = st.columns(4)
 
     cards = [
@@ -222,7 +220,6 @@ if page == "Dashboard":
     for col, (label, value) in zip([c1, c2, c3, c4], cards):
 
         with col:
-
             st.markdown(
                 f"""
                 <div class="metric-card">
@@ -236,8 +233,6 @@ if page == "Dashboard":
     st.markdown("")
 
     left, right = st.columns(2)
-
-    # PURCHASE DISTRIBUTION
 
     with left:
 
@@ -267,8 +262,6 @@ if page == "Dashboard":
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
-    # MONTHLY PURCHASE ACTIVITY
 
     with right:
 
@@ -322,7 +315,6 @@ if page == "Dashboard":
         unsafe_allow_html=True
     )
 
-
 # =====================================================
 # 7. PURCHASE PREDICTION
 # =====================================================
@@ -335,15 +327,16 @@ elif page == "Purchase Prediction":
     )
 
     st.markdown(
-        '<div class="sub-title">Enter customer visit details to estimate the possibility of a purchase.</div>',
+        '<div class="sub-title">Enter customer visit details to predict their purchase decision.</div>',
         unsafe_allow_html=True
     )
 
     st.markdown(
         """
         <div class="info-box">
-        Provide the customer's browsing activity and visit details.
-        The trained machine learning model will generate a prediction.
+        Enter the customer's browsing activity and visit details.
+        The machine learning model will estimate the possibility
+        of a purchase.
         </div>
         """,
         unsafe_allow_html=True
@@ -493,7 +486,7 @@ elif page == "Purchase Prediction":
         st.markdown("---")
 
         submitted = st.form_submit_button(
-            "🔍 Generate Purchase Prediction",
+            "🔍 Predict Customer Purchase",
             use_container_width=True
         )
 
@@ -519,7 +512,7 @@ elif page == "Purchase Prediction":
             "Weekend": weekend == "Yes"
         }])
 
-        # Match the training category order
+        # Match training category order
 
         month_categories = sorted(
             df["Month"].dropna().unique()
@@ -568,21 +561,23 @@ elif page == "Purchase Prediction":
             probabilities[no_purchase_index] * 100
         )
 
-        # DISPLAY RESULT
+        # FINAL CUSTOMER DECISION
 
         st.markdown("---")
         st.markdown("## Prediction Result")
 
         if prediction == 1:
 
-            st.success("Purchase Expected")
-
             st.markdown(
                 """
-                <div class="info-box">
-                Based on the entered visit details, the model
-                predicts that this customer is likely to complete
-                a purchase.
+                <div class="final-result">
+                    <h2 style="color:#16865b;">
+                        ✓ Customer Will Make a Purchase
+                    </h2>
+                    <p style="color:#52647c;">
+                        The model predicts that this customer
+                        is likely to complete a purchase.
+                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -590,22 +585,24 @@ elif page == "Purchase Prediction":
 
         else:
 
-            st.warning("Purchase Not Expected")
-
             st.markdown(
                 """
-                <div class="info-box">
-                Based on the entered visit details, the model
-                predicts that this customer is less likely to
-                complete a purchase.
+                <div class="final-result">
+                    <h2 style="color:#c17b21;">
+                        Customer Will Not Make a Purchase
+                    </h2>
+                    <p style="color:#52647c;">
+                        The model predicts that this customer
+                        is unlikely to complete a purchase.
+                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-        # PROBABILITY CARDS
+        # ONLY TWO PROBABILITY CARDS
 
-        st.markdown("### Prediction Probability")
+        st.markdown("### Purchase Probability")
 
         p1, p2 = st.columns(2)
 
@@ -614,14 +611,11 @@ elif page == "Purchase Prediction":
             st.markdown(
                 f"""
                 <div class="result-card">
-                    <div style="color:#718096;font-size:15px;">
-                        Purchase Probability
+                    <div class="result-label">
+                        Probability of Purchase
                     </div>
                     <div class="result-number" style="color:#16865b;">
                         {purchase_probability:.2f}%
-                    </div>
-                    <div style="color:#718096;font-size:13px;">
-                        Probability of purchase
                     </div>
                 </div>
                 """,
@@ -633,59 +627,22 @@ elif page == "Purchase Prediction":
             st.markdown(
                 f"""
                 <div class="result-card">
-                    <div style="color:#718096;font-size:15px;">
-                        No Purchase Probability
+                    <div class="result-label">
+                        Probability of No Purchase
                     </div>
                     <div class="result-number" style="color:#c17b21;">
                         {no_purchase_probability:.2f}%
-                    </div>
-                    <div style="color:#718096;font-size:13px;">
-                        Probability of no purchase
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-        st.markdown("### Probability Comparison")
-
-        probability_data = pd.DataFrame({
-            "Outcome": ["Purchase", "No Purchase"],
-            "Probability": [
-                purchase_probability,
-                no_purchase_probability
-            ]
-        })
-
-        fig = px.bar(
-            probability_data,
-            x="Outcome",
-            y="Probability",
-            color="Outcome",
-            text_auto=".2f",
-            color_discrete_map={
-                "Purchase": "#16865b",
-                "No Purchase": "#d99a36"
-            }
-        )
-
-        fig.update_layout(
-            paper_bgcolor="white",
-            plot_bgcolor="white",
-            showlegend=False,
-            yaxis_title="Probability (%)",
-            xaxis_title="Predicted Outcome",
-            yaxis_range=[0, 100]
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
         st.caption(
-            "Note: Probabilities represent the model's estimates "
-            "for the two possible outcomes. They are not a guarantee "
-            "of actual customer behaviour."
+            "The two percentages represent the model's estimated "
+            "probabilities for purchase and no purchase. "
+            "Together, they add up to 100%."
         )
-
 
 # =====================================================
 # 8. DATASET ANALYSIS
@@ -699,7 +656,7 @@ elif page == "Dataset Analysis":
     )
 
     st.markdown(
-        '<div class="sub-title">Explore the dataset, statistical summary and important customer patterns.</div>',
+        '<div class="sub-title">Explore the dataset, statistical summary and customer patterns.</div>',
         unsafe_allow_html=True
     )
 
@@ -716,19 +673,14 @@ elif page == "Dataset Analysis":
         st.metric("Total Columns", df.shape[1])
 
     with c3:
-        st.metric(
-            "Missing Values",
-            int(df.isnull().sum().sum())
-        )
+        st.metric("Purchase Records", f"{total_purchases:,}")
 
     # DATASET PREVIEW
 
     st.markdown("---")
     st.markdown("### Dataset Preview")
 
-    st.caption(
-        "A sample of the actual online shopping dataset."
-    )
+    st.caption("Sample records from the original dataset.")
 
     st.dataframe(
         df.head(10),
@@ -742,37 +694,14 @@ elif page == "Dataset Analysis":
     st.markdown("### Statistical Summary")
 
     st.caption(
-        "This summary shows the count, average, standard deviation, "
-        "minimum and maximum values of numerical columns."
+        "Numerical summary showing count, mean, standard deviation, "
+        "minimum, maximum and quartile values."
     )
 
     numerical_summary = df.describe().T
 
     st.dataframe(
         numerical_summary.round(2),
-        use_container_width=True
-    )
-
-    # MISSING VALUES
-
-    st.markdown("---")
-    st.markdown("### Missing Value Analysis")
-
-    missing_data = pd.DataFrame({
-        "Column": df.columns,
-        "Missing Values": df.isnull().sum().values,
-        "Missing Percentage": (
-            df.isnull().mean().values * 100
-        ).round(2)
-    })
-
-    missing_data = missing_data.sort_values(
-        by="Missing Values",
-        ascending=False
-    )
-
-    st.dataframe(
-        missing_data,
         use_container_width=True
     )
 
@@ -809,7 +738,7 @@ elif page == "Dataset Analysis":
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # PRODUCT PAGE ACTIVITY
+    # PRODUCT PAGE VISITS
 
     st.markdown("### Product Page Visits")
 
@@ -835,7 +764,7 @@ elif page == "Dataset Analysis":
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # WEEKEND AND WEEKDAY
+    # WEEKEND AND WEEKDAY PURCHASES
 
     st.markdown("### Weekend vs Weekday Purchases")
 
@@ -870,7 +799,6 @@ elif page == "Dataset Analysis":
 
     st.plotly_chart(fig, use_container_width=True)
 
-
 # =====================================================
 # 9. MODEL PERFORMANCE
 # =====================================================
@@ -887,8 +815,6 @@ elif page == "Model Performance":
         unsafe_allow_html=True
     )
 
-    # PREPARE DATA
-
     X = df.drop("Revenue", axis=1)
     y = df["Revenue"].astype(int)
 
@@ -904,8 +830,6 @@ elif page == "Model Performance":
         fill_value=0
     )
 
-    # TRAIN TEST SPLIT
-
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -914,13 +838,9 @@ elif page == "Model Performance":
         stratify=y
     )
 
-    # PREDICTION
-
     y_pred = model.predict(X_test)
 
     accuracy = accuracy_score(y_test, y_pred) * 100
-
-    # MODEL SUMMARY
 
     c1, c2, c3 = st.columns(3)
 
@@ -989,13 +909,12 @@ elif page == "Model Performance":
         <div class="info-box">
         <b>Random Forest:</b> It combines multiple decision trees
         to make a final prediction. Feature importance helps us
-        understand which input features contribute more to the
-        model's predictions.
+        understand which input features contribute more to
+        the model's predictions.
         </div>
         """,
         unsafe_allow_html=True
     )
-
 
 # =====================================================
 # 10. FOOTER
